@@ -329,11 +329,27 @@ unsigned floatScale2(unsigned uf) {
     // 先处理特殊值 正负无穷 NaN 均返回本身
     // 阶码
     int exp = (uf&0x7f800000)>>23;
-    //
-    if (exp == 0) {
-
+    int sign = uf&(1<<31);
+    // 阶码全为1  无穷 或者 NaN
+    // 返回本身
+    if (exp == 255) {
+        return uf;
     }
-  return 2;
+    // 当阶码全为0的时候 在0~1 的范围内
+    // 出看起来完全不符合逻辑
+    // 但是你用草稿纸推一遍你就会发现这个的神奇之处
+    if (exp == 0) {
+        return (uf << 1) | sign;
+    }
+
+    // 规格化情况
+    exp++;
+    // 溢出 返回无穷
+    if (exp==255) {
+        return 0x7f800000|sign;
+    }
+    //清除原本uf的exp位 并且填入新的exp
+    return (uf&0x807fffff) | (exp<<23);
 }
 /* 
  * floatFloat2Int - Return bit-level equivalent of expression (int) f
@@ -348,7 +364,40 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
-  return 2;
+    // 浮点数转为整数
+    int sign = uf>>31;
+    int E = ((uf & 0x7f800000)>>23)-127;
+    // 获得尾数
+    // 为什么要 | 0x00800000 规格化的表示 个位1是隐藏的 通过这个操作增补回去
+    int frac = (uf&0x007fffff) | 0x00800000;
+
+    // 值为0的情况
+    if (!(uf&0x7ffffff)) {
+        return 0;
+    }
+
+    // 因为int32 最多能表示 2^31-1 所以如果 1.xxx * 2^31  的时候直接溢出了
+    // 按照要求返回 0x80000000u
+    if (E >= 31) {
+        return 0x80000000;
+    }
+    // 这里包含了几种情况
+    // 1.非规格化的表示 0.xxx * 2 ^(1-127)
+    // 2.规格化的表示 1.xxx * 2^i (i为负数)
+    // 无论如何值都落在 0~1 内 转成 int 都是0
+    if (E < 0) {
+        return 0;
+    }
+    // 为什么要23判断一下
+    // 因为小数点在第23位后面 frac 相当于小数点 向右移了23位
+    // 所以这里要补回来
+    if (E >23) frac = frac <<(E-23);
+    else frac = frac >>(23-E);
+
+    // 符号位和原来的浮点数相同
+    if (!((frac >>31)^sign)) return frac;
+    // 符号位和原来的不同
+    else return ~frac+1;
 }
 /* 
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x
@@ -364,5 +413,24 @@ int floatFloat2Int(unsigned uf) {
  *   Rating: 4
  */
 unsigned floatPower2(int x) {
-    return 2;
+    if (x < -150) {
+        return 0;
+    }
+
+    if (x>=-150 && x <=-127) {
+        int shift = -x-127;
+        int frac = 1<< shift;
+        return  frac;
+    }
+
+    if (x>=-127 && x<=127) {
+        int exp = (x+127) <<23;
+        return  exp;
+    }
+
+    if (x>=128) {
+        int inf =0xff<<23;
+        return inf;
+    }
+    return 0;
 }
