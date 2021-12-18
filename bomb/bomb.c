@@ -18,6 +18,13 @@
  * PERPETRATOR will not apologize for the PERPETRATOR's poor sense of
  * humor.  This license is null and void where the BOMB is prohibited
  * by law.
+ *
+ * 1. Border relations with Canada have never been better.
+ * 2. 1 2 4 8 16 32
+ * 3. 1 311
+ * 4. 7 0
+ * 5.
+ * 6.
  ***************************************************************************/
 
 #include <stdio.h>
